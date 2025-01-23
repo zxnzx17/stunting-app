@@ -89,44 +89,37 @@ if selected == "Prediksi Prevalensi":
             if filtered_results.empty:
                 st.warning(f"Tidak ada data prediksi yang cocok untuk filter {selected_kabupaten}, {selected_tahun}, dan {selected_metode}.")
             else:
-                if selected_kabupaten == 'Semua Kabupaten/Kota' and selected_tahun == 'Semua Tahun' and selected_metode == 'Semua Metode':
-                    # Hitung rata-rata prediksi berdasarkan metode
+                if selected_kabupaten != 'Semua Kabupaten/Kota':
+                    # Hitung rata-rata prediksi berdasarkan metode untuk kabupaten yang dipilih
+                    avg_predictions_by_method = filtered_results.groupby('Metode')['Prediksi'].mean().reset_index()
+
+                    st.write(f"### Rata-rata Prediksi Prevalensi Stunting di {selected_kabupaten} Berdasarkan Metode")
+                    for index, row in avg_predictions_by_method.iterrows():
+                        st.success(f"- **Metode {row['Metode']}**: {row['Prediksi']:.2f}%")
+                else:
+                    # Hitung rata-rata prediksi berdasarkan metode untuk semua kabupaten
                     avg_predictions_by_method = filtered_results.groupby('Metode')['Prediksi'].mean().reset_index()
 
                     st.write("### Rata-rata Prediksi Prevalensi Stunting Berdasarkan Metode")
                     for index, row in avg_predictions_by_method.iterrows():
                         st.success(f"- **Metode {row['Metode']}**: {row['Prediksi']:.2f}%")
 
-                    # Hitung rata-rata MAPE dan MSE berdasarkan metode
-                    if 'MAPE' in filtered_results.columns and 'MSE' in filtered_results.columns:
-                        st.write("### Rata-rata Error Metrics Berdasarkan Metode")
-                        grouped_metrics = filtered_results.groupby('Metode').agg({
-                            'MAPE': 'mean',
-                            'MSE': 'mean'
-                        }).reset_index()
+                # Tampilkan rata-rata MAPE dan MSE jika data tersedia
+                if 'MAPE' in filtered_results.columns and 'MSE' in filtered_results.columns:
+                    st.write("### Rata-rata Error Metrics Berdasarkan Metode")
+                    grouped_metrics = filtered_results.groupby('Metode').agg({
+                        'MAPE': 'mean',
+                        'MSE': 'mean'
+                    }).reset_index()
 
-                        for index, row in grouped_metrics.iterrows():
-                            st.info(
-                                f"- **Metode {row['Metode']}**:\n"
-                                f"  - **MAPE:** {row['MAPE']:.6f}\n"
-                                f"  - **MSE:** {row['MSE']:.6f}"
-                            )
-                    else:
-                        st.warning("Kolom MAPE dan MSE tidak tersedia dalam data.")
+                    for index, row in grouped_metrics.iterrows():
+                        st.info(
+                            f"- **Metode {row['Metode']}**:\n"
+                            f"  - **MAPE:** {row['MAPE']:.6f}\n"
+                            f"  - **MSE:** {row['MSE']:.6f}"
+                        )
                 else:
-                    # Hitung rata-rata prediksi untuk kabupaten, tahun, dan metode yang dipilih
-                    avg_prediksi = filtered_results['Prediksi'].mean()
-                    st.success(f"Rata-rata Prediksi Prevalensi Stunting untuk {selected_kabupaten} pada tahun {selected_tahun} dengan metode {selected_metode}: **{avg_prediksi:.2f}%**")
-
-                    # Tampilkan error metrics jika tersedia
-                    if 'MAPE' in filtered_results.columns and 'MSE' in filtered_results.columns:
-                        avg_mape = filtered_results['MAPE'].mean()
-                        avg_mse = filtered_results['MSE'].mean()
-                        st.write("### Rata-rata Error Metrics")
-                        st.info(f"- **MAPE (Mean Absolute Percentage Error):** {avg_mape:.6f}")
-                        st.info(f"- **MSE (Mean Squared Error):** {avg_mse:.6f}")
-                    else:
-                        st.warning("Kolom MAPE dan MSE tidak tersedia dalam data.")
+                    st.warning("Kolom MAPE dan MSE tidak tersedia dalam data.")
 
 # Halaman 2: Catatan Pembuat
 elif selected == "Catatan Pembuat":
@@ -138,7 +131,7 @@ elif selected == "Catatan Pembuat":
     col1, col2 = st.columns([1, 2])
 
     with col1:
-        st.image("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS8AGXA0AjbfuyQqtfot7BTNnjUBolQJbn9yw&s", caption="Vinny Ramayani Saragih", use_container_width=True)
+        st.image("creator_image.jpg", caption="Vinny Ramayani Saragih", use_container_width=True)
 
     with col2:
         st.markdown("### 📚 **Penelitian ini adalah bagian dari Skripsi**")
@@ -225,4 +218,3 @@ elif selected == "Catatan Pembuat":
         **Minum Layak** memiliki pengaruh negatif tertinggi terhadap prevalensi stunting, menunjukkan pentingnya akses air bersih dalam mengurangi stunting.
         """
     )
-

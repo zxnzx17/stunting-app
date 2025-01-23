@@ -45,7 +45,7 @@ if selected == "Prediksi Prevalensi":
             IbuNifasVitA = float(st.text_input("Ibu Nifas Mendapatkan Vitamin A (%):", "0"))
             K4 = float(st.text_input("Cakupan K4 (%):", "0"))
             IPM = float(st.text_input("Indeks Pembangunan Manusia (IPM):", "0"))
-            MinumLayak = float(st.text_input("Persentase Rumah Tangga dengan Akses Minimum Layak (%):", "0"))
+            MinumLayak = float(st.text_input("Persentase Rumah Tangga dengan Akses Mimum Layak (%):", "0"))
             SanitasiLayak = float(st.text_input("Persentase Rumah Tangga dengan Sanitasi Layak (%):", "0"))
         except ValueError:
             st.error("Masukkan angka yang valid untuk semua input.")
@@ -67,27 +67,37 @@ if selected == "Prediksi Prevalensi":
     # Ambil input pengguna
     input_data = user_input_features()
 
-    # Tombol untuk menampilkan hasil prediksi
-    if st.button('Check Stunting'):
-        if input_data is None:
-            st.error("Harap isi semua input dengan nilai yang valid sebelum melanjutkan.")
-        else:
-            # Filter data dari final_results.csv
-            filtered_results = results_data.copy()
-            if selected_kabupaten != 'Semua Kabupaten/Kota':
-                filtered_results = filtered_results[filtered_results['Kabupaten'] == selected_kabupaten]
-            if selected_tahun != 'Semua Tahun':
-                filtered_results = filtered_results[filtered_results['Tahun'] == selected_tahun]
-            if selected_metode != 'Semua Metode':
-                filtered_results = filtered_results[filtered_results['Metode'] == selected_metode]
+ # Menampilkan hasil prediksi dan perbandingan error metrics
+if st.button('Check Prevalensi Stunting'):
+    if input_data is None:
+        st.error("Harap isi semua input dengan nilai yang valid sebelum melanjutkan.")
+    else:
+        # Filter data dari final_results.csv
+        filtered_results = results_data.copy()
+        if selected_kabupaten != 'Semua Kabupaten/Kota':
+            filtered_results = filtered_results[filtered_results['Kabupaten'] == selected_kabupaten]
+        if selected_tahun != 'Semua Tahun':
+            filtered_results = filtered_results[filtered_results['Tahun'] == selected_tahun]
+        if selected_metode != 'Semua Metode':
+            filtered_results = filtered_results[filtered_results['Metode'] == selected_metode]
 
-            # Tampilkan hasil prediksi jika data tersedia
-            st.subheader("Hasil Prediksi")
-            if filtered_results.empty:
-                st.warning(f"Tidak ada data prediksi yang cocok untuk filter {selected_kabupaten}, {selected_tahun}, dan {selected_metode}.")
+        # Tampilkan hasil prediksi jika data tersedia
+        st.subheader("Hasil Prediksi")
+        if filtered_results.empty:
+            st.warning(f"Tidak ada data prediksi yang cocok untuk filter {selected_kabupaten}, {selected_tahun}, dan {selected_metode}.")
+        else:
+            prediksi = filtered_results['Prediksi'].values[0]  # Ambil prediksi pertama
+            st.success(f"Prediksi Prevalensi Stunting untuk {selected_kabupaten} pada tahun {selected_tahun} dengan metode {selected_metode}: **{prediksi:.2f}%**")
+
+            # Cek apakah kolom MAPE dan MSE tersedia di file
+            if 'MAPE' in filtered_results.columns and 'MSE' in filtered_results.columns:
+                mape = filtered_results['MAPE'].values[0]
+                mse = filtered_results['MSE'].values[0]
+                st.write("### Perbandingan Error Metrics")
+                st.warning(f"- **MAPE (Mean Absolute Percentage Error):** {mape:.6f}")
+                st.warning(f"- **MSE (Mean Squared Error):** {mse:.6f}")
             else:
-                prediksi = filtered_results['Prediksi'].values[0]  # Ambil prediksi pertama
-                st.success(f"Prediksi Prevalensi Stunting untuk {selected_kabupaten} pada tahun {selected_tahun} dengan metode {selected_metode}: **{prediksi:.2f}%**")
+                st.warning("Kolom MAPE dan MSE tidak tersedia dalam data.")
 
 # Halaman 2: Catatan Pembuat
 elif selected == "Catatan Pembuat":

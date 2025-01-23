@@ -25,6 +25,9 @@ if selected == "Prediksi Prevalensi":
     except FileNotFoundError as e:
         st.error(f"File tidak ditemukan: {e.filename}. Harap pastikan file tersedia di folder yang sesuai.")
         st.stop()
+    except Exception as e:
+        st.error(f"Terjadi kesalahan saat membaca file: {str(e)}")
+        st.stop()
 
     # Ambil daftar unik kabupaten, tahun, dan metode
     kabupaten_list = ['Semua Kabupaten/Kota'] + list(results_data['Kabupaten'].dropna().unique())
@@ -45,15 +48,15 @@ if selected == "Prediksi Prevalensi":
             IbuNifasVitA = float(st.text_input("Ibu Nifas Mendapatkan Vitamin A (%):", "0"))
             K4 = float(st.text_input("Cakupan K4 (%):", "0"))
             IPM = float(st.text_input("Indeks Pembangunan Manusia (IPM):", "0"))
-            MinumLayak = float(st.text_input("Persentase Rumah Tangga dengan Akses Mimum Layak (%):", "0"))
+            MinumLayak = float(st.text_input("Persentase Rumah Tangga dengan Akses Minum Layak (%):", "0"))
             SanitasiLayak = float(st.text_input("Persentase Rumah Tangga dengan Sanitasi Layak (%):", "0"))
         except ValueError:
             st.error("Masukkan angka yang valid untuk semua input.")
-            st.stop()
+            return None
 
         # Validasi input: semua input harus diisi dengan nilai lebih besar dari 0
         if any(val <= 0.0 for val in [BayiBBLR, IbuNifasVitA, K4, IPM, MinumLayak, SanitasiLayak]):
-            return None  # Hentikan jika input tidak valid
+            return None
 
         return pd.DataFrame([{
             'BayiBBLR': BayiBBLR,
@@ -67,37 +70,63 @@ if selected == "Prediksi Prevalensi":
     # Ambil input pengguna
     input_data = user_input_features()
 
- # Menampilkan hasil prediksi dan perbandingan error metrics
-if st.button('Check Prevalensi Stunting'):
-    if input_data is None:
-        st.error("Harap isi semua input dengan nilai yang valid sebelum melanjutkan.")
-    else:
-        # Filter data dari final_results.csv
-        filtered_results = results_data.copy()
-        if selected_kabupaten != 'Semua Kabupaten/Kota':
-            filtered_results = filtered_results[filtered_results['Kabupaten'] == selected_kabupaten]
-        if selected_tahun != 'Semua Tahun':
-            filtered_results = filtered_results[filtered_results['Tahun'] == selected_tahun]
-        if selected_metode != 'Semua Metode':
-            filtered_results = filtered_results[filtered_results['Metode'] == selected_metode]
-
-        # Tampilkan hasil prediksi jika data tersedia
-        st.subheader("Hasil Prediksi")
-        if filtered_results.empty:
-            st.warning(f"Tidak ada data prediksi yang cocok untuk filter {selected_kabupaten}, {selected_tahun}, dan {selected_metode}.")
+    # Tombol untuk menampilkan hasil prediksi
+    if st.button('Check Prevalensi Stunting'):
+        if input_data is None:
+            st.error("Harap isi semua input dengan nilai yang valid sebelum melanjutkan.")
         else:
-            prediksi = filtered_results['Prediksi'].values[0]  # Ambil prediksi pertama
-            st.success(f"Prediksi Prevalensi Stunting untuk {selected_kabupaten} pada tahun {selected_tahun} dengan metode {selected_metode}: **{prediksi:.2f}%**")
+            # Filter data dari final_results.csv
+            filtered_results = results_data.copy()
+            if selected_kabupaten != 'Semua Kabupaten/Kota':
+                filtered_results = filtered_results[filtered_results['Kabupaten'] == selected_kabupaten]
+            if selected_tahun != 'Semua Tahun':
+                filtered_results = filtered_results[filtered_results['Tahun'] == selected_tahun]
+            if selected_metode != 'Semua Metode':
+                filtered_results = filtered_results[filtered_results['Metode'] == selected_metode]
 
-            # Cek apakah kolom MAPE dan MSE tersedia di file
-            if 'MAPE' in filtered_results.columns and 'MSE' in filtered_results.columns:
-                mape = filtered_results['MAPE'].values[0]
-                mse = filtered_results['MSE'].values[0]
-                st.write("### Perbandingan Error Metrics")
-                st.warning(f"- **MAPE (Mean Absolute Percentage Error):** {mape:.6f}")
-                st.warning(f"- **MSE (Mean Squared Error):** {mse:.6f}")
+            # Tampilkan hasil prediksi jika data tersedia
+            st.subheader("Hasil Prediksi")
+            if filtered_results.empty:
+                st.warning(f"Tidak ada data prediksi yang cocok untuk filter {selected_kabupaten}, {selected_tahun}, dan {selected_metode}.")
             else:
-                st.warning("Kolom MAPE dan MSE tidak tersedia dalam data.")
+                if selected_kabupaten == 'Semua Kabupaten/Kota' and selected_tahun == 'Semua Tahun' and selected_metode == 'Semua Metode':
+                    # Hitung rata-rata prediksi berdasarkan metode
+                    avg_predictions_by_method = filtered_results.groupby('Metode')['Prediksi'].mean().reset_index()
+
+                    st.write("### Rata-rata Prediksi Prevalensi Stunting Berdasarkan Metode")
+                    for index, row in avg_predictions_by_method.iterrows():
+                        st.success(f"- **Metode {row['Metode']}**: {row['Prediksi']:.2f}%")
+
+                    # Hitung rata-rata MAPE dan MSE berdasarkan metode
+                    if 'MAPE' in filtered_results.columns and 'MSE' in filtered_results.columns:
+                        st.write("### Rata-rata Error Metrics Berdasarkan Metode")
+                        grouped_metrics = filtered_results.groupby('Metode').agg({
+                            'MAPE': 'mean',
+                            'MSE': 'mean'
+                        }).reset_index()
+
+                        for index, row in grouped_metrics.iterrows():
+                            st.info(
+                                f"- **Metode {row['Metode']}**:\n"
+                                f"  - **MAPE:** {row['MAPE']:.6f}\n"
+                                f"  - **MSE:** {row['MSE']:.6f}"
+                            )
+                    else:
+                        st.warning("Kolom MAPE dan MSE tidak tersedia dalam data.")
+                else:
+                    # Hitung rata-rata prediksi untuk kabupaten, tahun, dan metode yang dipilih
+                    avg_prediksi = filtered_results['Prediksi'].mean()
+                    st.success(f"Rata-rata Prediksi Prevalensi Stunting untuk {selected_kabupaten} pada tahun {selected_tahun} dengan metode {selected_metode}: **{avg_prediksi:.2f}%**")
+
+                    # Tampilkan error metrics jika tersedia
+                    if 'MAPE' in filtered_results.columns and 'MSE' in filtered_results.columns:
+                        avg_mape = filtered_results['MAPE'].mean()
+                        avg_mse = filtered_results['MSE'].mean()
+                        st.write("### Rata-rata Error Metrics")
+                        st.info(f"- **MAPE (Mean Absolute Percentage Error):** {avg_mape:.6f}")
+                        st.info(f"- **MSE (Mean Squared Error):** {avg_mse:.6f}")
+                    else:
+                        st.warning("Kolom MAPE dan MSE tidak tersedia dalam data.")
 
 # Halaman 2: Catatan Pembuat
 elif selected == "Catatan Pembuat":
@@ -159,14 +188,14 @@ elif selected == "Catatan Pembuat":
             """
             **Model dan Kinerja**:
             - SVR:
-              - **MSE**: 396,357
-              - **MAPE**: 76,17
+              - **MSE**: 971,583908
+              - **MAPE**: 117,936564
             - Decision Tree:
-              - **MSE**: 396,357
-              - **MAPE**: 76,54
+              - **MSE**: 92,835758
+              - **MAPE**: 53,177577
             - Random Forest:
-              - **MSE**: 396,772
-              - **MAPE**: 76,899
+              - **MSE**: 102,752323
+              - **MAPE**: 57,029417
             """
         )
 
@@ -174,7 +203,7 @@ elif selected == "Catatan Pembuat":
         st.markdown(
             """
             **Kesimpulan**:
-            - **SVR** adalah model terbaik untuk memprediksi prevalensi stunting di Sumatera Utara karena memiliki **MSE** dan **MAPE** yang paling rendah dibandingkan Random Forest dan Decision Tree.
+            - **Decision Tree** adalah model terbaik untuk memprediksi prevalensi stunting di Sumatera Utara karena memiliki **MSE** dan **MAPE** yang paling rendah dibandingkan Random Forest dan SVR.
             """
         )
 

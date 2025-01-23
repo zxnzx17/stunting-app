@@ -85,7 +85,7 @@ if selected == "Prediksi Prevalensi":
                 filtered_results = filtered_results[filtered_results['Metode'] == selected_metode]
 
             # Tampilkan hasil prediksi jika data tersedia
-            st.subheader("Hasil Prediksi")
+            st.subheader("Hasil")
             if filtered_results.empty:
                 st.warning(f"Tidak ada data prediksi yang cocok untuk filter {selected_kabupaten}, {selected_tahun}, dan {selected_metode}.")
             else:
@@ -93,20 +93,20 @@ if selected == "Prediksi Prevalensi":
                     # Hitung rata-rata prediksi berdasarkan metode untuk kabupaten yang dipilih
                     avg_predictions_by_method = filtered_results.groupby('Metode')['Prediksi'].mean().reset_index()
 
-                    st.write(f"### Rata-rata Prediksi Prevalensi Stunting di {selected_kabupaten} Berdasarkan Metode")
+                    st.write(f"### Prediksi Prevalensi Stunting di {selected_kabupaten} Berdasarkan Metode")
                     for index, row in avg_predictions_by_method.iterrows():
                         st.success(f"- **Metode {row['Metode']}**: {row['Prediksi']:.2f}%")
                 else:
                     # Hitung rata-rata prediksi berdasarkan metode untuk semua kabupaten
                     avg_predictions_by_method = filtered_results.groupby('Metode')['Prediksi'].mean().reset_index()
 
-                    st.write("### Rata-rata Prediksi Prevalensi Stunting Berdasarkan Metode")
+                    st.write("### Prediksi Prevalensi Stunting Berdasarkan Metode")
                     for index, row in avg_predictions_by_method.iterrows():
                         st.success(f"- **Metode {row['Metode']}**: {row['Prediksi']:.2f}%")
 
                 # Tampilkan rata-rata MAPE dan MSE jika data tersedia
                 if 'MAPE' in filtered_results.columns and 'MSE' in filtered_results.columns:
-                    st.write("### Rata-rata Error Metrics Berdasarkan Metode")
+                    st.write("### Error Metrics Berdasarkan Metode")
                     grouped_metrics = filtered_results.groupby('Metode').agg({
                         'MAPE': 'mean',
                         'MSE': 'mean'
